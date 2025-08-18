@@ -1,0 +1,77 @@
+name: CI-CD
+on: 
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Obtendo o código
+      uses: actions/checkout@v4.1.5
+    - name: Autenticação no Docker Hub
+      uses: docker/login-action@v3.1.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build da Imagem Docker
+      uses: docker/build-push-action@v5.3.0
+      with:
+        context: ./src
+        file: ./src/Dockerfile
+        push: true
+        tags: | 
+          layzan/aula-primeira-pipeline:v${{ github.run_number }} 
+          layzan/aula-primeira-pipeline:latest 
+  CD:
+    runs-on: [self-hosted]
+    needs: [CI]
+    steps: 
+    - name: Obtendo o código
+      uses: actions/checkout@v4.1.5
+    # - name: Configuração de contexto do Kubernetes
+    #   uses: azure/k8s-set-context@v4.0.0
+    #   with:
+    #     method: kubeconfig
+    #     kubeconfig: ${{ secrets.K8S_CONFIG }}
+    # - name: Execução do Manifesto
+    #   uses: Azure/k8s-deploy@v5
+    #   with:
+    #     manifests: |
+    #       ./k8s/deployment.yaml
+    #     images: |
+    #       layzan/aula-primeira-pipeline:v${{ github.run_number }}
+    - name: Verificar status do minikube
+      run: |
+        minikube status
+        kubectl get nodes
+    - name: Aplicar manifesto Kubernetes
+      run: |
+        # Atualizar a imagem no deployment
+        sed -i "s|layzan/primeira-pipeline-cicd|layzan/aula-primeira-pipeline:v${{ github.run_number }}|g" ./k8s/deployment.yaml
+        
+        # Aplicar o deployment
+        kubectl apply -f ./k8s/deployment.yaml
+        
+        # Verificar o status
+        kubectl get pods
+        kubectl get services
+    - name: Fazer pull da imagem no minikube
+      run: |
+        # Fazer pull da imagem no minikube
+        minikube ssh "docker pull layzan/aula-primeira-pipeline:v${{ github.run_number }}"
+        
+        # Aplicar o deployment novamente (para garantir)
+        kubectl apply -f ./k8s/deployment.yaml
+    - name: Verificar deploy
+      run: |
+        # Aguardar os pods ficarem prontos
+        kubectl wait --for=condition=ready pod -l app=web --timeout=300s
+        
+        # Mostrar status final
+        kubectl get pods
+        kubectl get services
+    - name: Expor o serviço (opcional)
+      run: |
+        # Para acessar o serviço externamente
+        minikube service web --url
