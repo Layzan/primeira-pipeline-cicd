@@ -23,11 +23,29 @@ jobs:
         tags: | 
           layzan/primeira-pipeline-cicd:v${{ github.run_number }} 
           layzan/primeira-pipeline-cicd:latest 
+  # CD:
+  #   needs: [CI]
+  #   uses: layzan/primeira-pipeline-cicd/.github/workflows/deploy.yml@main
+  #   with:
+  #     do_deployment_name: web
+  #     do_image_tag: layzan/primeira-pipeline-cicd:v${{ github.run_number }}
+  #   secrets: inherit
+
   CD:
+    runs-on: ubuntu-latest
     needs: [CI]
-    uses: layzan/primeira-pipeline-cicd/.github/workflows/deploy.yml@main
-    with:
-      do_deployment_name: web
-      do_image_tag: layzan/primeira-pipeline-cicd:v${{ github.run_number }}
-    secrets: inherit
+    steps: 
+      - name: Obtendo o código
+        uses: actions/checkout@v4.1.5
+
+      - name: Deploy na Digital Ocean
+        uses: arn-ob/do-kubectl-action@main
+        with:
+          do_access_token: ${{ secrets.DO_API_TOKEN }}
+          do_cluster_certificate: ${{ secrets.DO_CLUSTER_CERTIFICATE }}
+          do_deployment_name: web
+          do_container_name: web
+          do_image_tag: layzan/primeira-pipeline-cicd:v${{ github.run_number }}
+          do_namespace: web
+          args: ""
     
