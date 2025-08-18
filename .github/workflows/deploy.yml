@@ -1,0 +1,30 @@
+name: Deploy no Kubernetes
+on:
+  workflow_call:
+    inputs:
+      do_deployment_name:
+        type: string
+        required: true
+        description: "Nome do Deployment no Kubernetes"
+      do_image_tag:
+        type: string
+        required: true
+        description: "Tag da imagem que será atualizada no Deployment"
+
+jobs:
+  deploy-k8s:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Obtendo o código
+        uses: actions/checkout@v4.1.5
+
+      - name: Deploy na Digital Ocean
+        uses: arn-ob/do-kubectl-action@main
+        with:
+          do_access_token: ${{ secrets.DO_API_TOKEN }}
+          do_cluster_certificate: ${{ secrets.DO_CLUSTER_CERTIFICATE }}
+          do_deployment_name: ${{ inputs.do_deployment_name }}
+          do_container_name: web
+          do_image_tag: ${{ inputs.do_image_tag }}
+          do_namespace: web
+          args: ""
