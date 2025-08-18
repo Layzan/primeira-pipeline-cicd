@@ -27,7 +27,7 @@ jobs:
     needs: [CI]
     uses: layzan/primeira-pipeline-cicd/.github/workflows/deploy.yml@main
     with:
-      do_deployment_name: /k8s/deployment.yaml
+      do_deployment_name: web
       do_image_tag: layzan/primeira-pipeline-cicd:v${{ github.run_number }}
     secrets: inherit
     
